@@ -1,3 +1,5 @@
+// This is an experimental backend. You really shouldn't use it.
+
 package local_replica
 
 import (
@@ -5,8 +7,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/command"
+	"github.com/hashicorp/vault/physical/dynamodb"
+	"github.com/hashicorp/vault/physical/etcd"
+	"github.com/hashicorp/vault/physical/s3"
 	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/sdk/physical/file"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"time"
 )
@@ -21,6 +26,15 @@ type LocalReplicaBackend struct {
 	accessHistory map[string]time.Time
 }
 
+// todo: This is a guess of backends that might not be much of a hassle. Verify.
+var supportedBackends = map[string]physical.Factory{
+	"dynamodb":               dynamodb.NewDynamoDBBackend,
+	"etcd":                   etcd.NewEtcdBackend,
+	"file":                   file.NewFileBackend,
+	"inmem":                  inmem.NewInmem,
+	"s3":                     s3.NewS3Backend,
+}
+
 func NewLocalReplicaBackend(conf map[string]string, logger hclog.Logger) (physical.Backend, error) {
 	// make sure the user defined the target storage type
 	storageType, ok := conf["storage_type"]
@@ -31,10 +45,9 @@ func NewLocalReplicaBackend(conf map[string]string, logger hclog.Logger) (physic
 	// remove this key so the target backend doesn't get confused by an extra value
 	delete(conf, "storage_type")
 
-	// grab the factory method out of the command list
-	factory, ok := command.PhysicalBackends[storageType]
+	factory, ok := supportedBackends[storageType]
 	if !ok {
-		return nil, fmt.Errorf("unknown background type: %s", conf["storage_type"])
+		return nil, fmt.Errorf("unsupported background type: %s", conf["storage_type"])
 	}
 
 	// the real backend that our nodes will call
