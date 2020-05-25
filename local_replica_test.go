@@ -1,4 +1,4 @@
-package consul
+package local_replica
 
 import (
 	"github.com/hashicorp/vault/sdk/physical"
@@ -6,5 +6,5 @@ import (
 )
 
 func TestNilBackend(t *testing.T) {
-	physical.ExerciseBackend(t, &LocalReplica{})
+	physical.ExerciseBackend(t, &LocalReplicaBackend{})
 }
