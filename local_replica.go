@@ -29,11 +29,11 @@ type LocalReplicaBackend struct {
 
 // todo: This is a guess of backends that might not be much of a hassle. Verify.
 var supportedBackends = map[string]physical.Factory{
-	"dynamodb":               dynamodb.NewDynamoDBBackend,
-	"etcd":                   etcd.NewEtcdBackend,
-	"file":                   file.NewFileBackend,
-	"inmem":                  inmem.NewInmem,
-	"s3":                     s3.NewS3Backend,
+	"dynamodb": dynamodb.NewDynamoDBBackend,
+	"etcd":     etcd.NewEtcdBackend,
+	"file":     file.NewFileBackend,
+	"inmem":    inmem.NewInmem,
+	"s3":       s3.NewS3Backend,
 }
 
 func NewLocalReplicaBackend(conf map[string]string, logger hclog.Logger) (physical.Backend, error) {
