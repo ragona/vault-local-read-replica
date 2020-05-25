@@ -1,7 +1,7 @@
 # Vault Local Read Replica 
 Usually Hashicorp Vault is a single-instance application; even high-availability mode simply enables warm standby instances. 
-This instance is a single point of failure. Single points of failure are bad. 
-This storage backend removes that single point of failure by giving each host a local read-only Vault that caches secrets. 
+This instance is a single point of failure. Single points of failure are risky at scale. 
+This experimental storage backend is intended to enable local read-only Vaults that cache secrets. 
 
 ## How does that work? 
 If you go through the github.com/hashicorp/vault/physical folder you'll see a number of different implementations 
@@ -37,4 +37,4 @@ type LocalReplica struct {
 
 `LocalReplica` is simply two backends and a cache lifetime. `backend` is the "real" backend.
 It will be used as the authoritative source for data. `local` is just an `inmem` backend that 
-plays the role of a local cache. `cacheLifetime` is exactly what it sounds like.
+plays the role of a mutable local cache. `cacheLifetime` is exactly what it sounds like.
