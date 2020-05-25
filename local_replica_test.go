@@ -11,7 +11,9 @@ func TestLocalReplicaBackend(t *testing.T) {
 	logger := logging.NewVaultLogger(log.Debug)
 
 	b, err := NewLocalReplicaBackend(map[string]string{
-		"storage_type": "inmem",
+		"storage_type": "s3",
+		"region": "us-west-2",
+    	"bucket": "ragona-vault-test",
 	}, logger)
 
 	if err != nil {

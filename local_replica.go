@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/physical/dynamodb"
 	"github.com/hashicorp/vault/physical/etcd"
@@ -85,28 +86,35 @@ func (n *LocalReplicaBackend) Put(ctx context.Context, entry *physical.Entry) er
 
 func (n *LocalReplicaBackend) Get(ctx context.Context, key string) (*physical.Entry, error) {
 	if n.warm(key) {
-		return n.local.Get(ctx, key)
-	}
-
-	entry, err := n.backend.Get(ctx, key)
-	if err == nil {
-		err = n.local.Put(ctx, entry)
-		n.accessHistory[key] = time.Now()
+		entry, err := n.local.Get(ctx, key)
 		if err != nil {
-			// our inmem backend is broken; this should never happen
-			return nil, err
+			return nil, errwrap.Wrapf(fmt.Sprintf("warm cache local.Get failed on key: %q with err: {{err}}", key), err)
 		}
 
 		return entry, nil
 	}
 
-	// in this case we're falling back to a cold entry because we failed to update from backend
-	// todo consider logging a warning?
-	entry, err = n.local.Get(ctx, key)
+	// attempt to go fetch a fresh value
+	entry, err := n.backend.Get(ctx, key)
 	if err != nil {
-		// something truly funky is happening; suspect the accessHistory
-		return nil, err
+		// in this case we're falling back to a cold entry because we failed to update from backend
+		entry, err := n.local.Get(ctx, key)
+		if err != nil {
+			return nil, errwrap.Wrapf(fmt.Sprintf("get failed from both backends for key: %q with err: {{err}}", key), err)
+		}
+
+		// cold return
+		return entry, nil
 	}
+
+	if entry != nil {
+		err = n.local.Put(ctx, entry)
+		if err != nil {
+			return nil, errwrap.Wrapf(fmt.Sprintf("put failed from local for key: %q with err: {{err}}", key), err)
+		}
+	}
+
+	n.accessHistory[key] = time.Now()
 
 	return entry, nil
 }
@@ -125,7 +133,7 @@ func (n *LocalReplicaBackend) Delete(ctx context.Context, key string) error {
 }
 
 func (n *LocalReplicaBackend) List(ctx context.Context, prefix string) ([]string, error) {
-	return n.backend.List(ctx, prefix)
+	return n.local.List(ctx, prefix)
 }
 
 func (n *LocalReplicaBackend) cached(key string) bool {
